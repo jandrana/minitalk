@@ -6,21 +6,30 @@
 /*   By: ana-cast <ana-cast@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/22 12:59:40 by ana-cast          #+#    #+#             */
-/*   Updated: 2024/04/22 16:16:37 by ana-cast         ###   ########.fr       */
+/*   Updated: 2024/04/19 16:59:31 by ana-cast         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <minitalk.h>
 
-void	char_to_bitstring(pid_t pid, char *bit_string)
+void	free_array(int ***array, int i)
+{
+	while (i-- > 0)
+	{
+		free((*array)[i]);
+	}
+	free(*array);
+}
+
+void	char_to_bitstring(pid_t pid, int *bit_string)
 {
 	int	j;
 	int	send;
 
 	j = -1;
-	while (bit_string[++j])
+	while (++j <= 7)
 	{
-		if (bit_string[j] == '1')
+		if (bit_string[j] == 1)
 			send = SIGUSR1;
 		else
 			send = SIGUSR2;
@@ -35,29 +44,36 @@ void	char_to_bitstring(pid_t pid, char *bit_string)
 
 void	send_bits(pid_t pid, char *str)
 {
+	int		**result;
+	int		bytes;
+	int		bites;
 	int		i;
-	int		j;
-	int		k;
-	char	*result;
 
-	i = -1;
-	while (str[++i])
+	bytes = -1;
+	while (str[++bytes])
+		;
+	result = (int **)malloc(sizeof(int *) * bytes + 1);
+	bytes = 0;
+	while (str[bytes])
 	{
-		result = (char *)malloc(sizeof(char) * 7 + 1);
-		j = 0;
-		k = 6;
-		while (j < 7)
-		{
-			result[k] = "01"[str[i] % 2];
-			str[i] = str[i] / 2;
-			j++;
-			k--;
-		}
-		result[7] = '\0';
-		char_to_bitstring(pid, result);
-		free(result);
+		result[bytes] = (int *)malloc(sizeof(int) * 8);
+		bites = 8;
+		i = 0;
+		while (--bites >= 0)
+			result[bytes][i++] = (str[bytes] >> bites) & 1;
+		char_to_bitstring(pid, result[bytes]);
 		usleep(200);
+		bytes++;
 	}
+	free_array(&result, bytes);
+}
+
+void	client_handler(int signum)
+{
+	if (signum == SIGUSR1)
+		ft_printf("Server confirmation for 1\n");
+	if (signum == SIGUSR2)
+		ft_printf("Server confirmation for 0\n");
 }
 
 int	main(int argc, char **argv)
@@ -71,6 +87,8 @@ int	main(int argc, char **argv)
 		ft_printf("\033[0m");
 		exit(EXIT_FAILURE);
 	}
+	signal(SIGUSR1, client_handler);
+	signal(SIGUSR2, client_handler);
 	send_bits(ft_atoi(argv[1]), argv[2]);
 	send_bits(ft_atoi(argv[1]), "\0");
 	return (0);
